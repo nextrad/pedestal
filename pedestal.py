@@ -169,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--cli', help='launch command-line interface',
                         action='store_true', default=False)
     parser.add_argument('-f', '--file', help="control file containing direction parameters")
+    parser.add_argument('-p', '--port', help="serial port to connect to [/dev/ttyUSB0]", default='/dev/ttyUSB0')
     args = parser.parse_args()
 
     logger = logging.getLogger('pedestal_logger')
@@ -180,7 +181,7 @@ if __name__ == "__main__":
         ch.setLevel(logging.WARNING)
     logger.addHandler(ch)
 
-    pedestal = Pedestal()
+    pedestal = Pedestal(device=args.port)
 
     if args.cli:
         user_input = ''
