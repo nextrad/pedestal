@@ -12,6 +12,8 @@ Requires Python3 with pyserial
       -h, --help   show this help message and exit
       -d, --debug  display debug messages to STDOUT
       -c, --cli    launch command-line interface
+      -f FILE, --file FILE  control file containing direction parameters
+
 Command-Line Interface
 
     sudo python3 pedestal.py -c

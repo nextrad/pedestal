@@ -3,11 +3,13 @@
 # Author:       Brad Kahn based off the work of Stuart Hadfield and David Bussett
 
 import argparse
+import configparser
 import serial
 import sys
+import os
 import logging
-
-
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
 
 class Pedestal(object):
     """
@@ -15,12 +17,14 @@ class Pedestal(object):
     Supported hardware: mount - ORION Atlas Pro AZ/EQ-G GoTo.
                         hand controller - ORION SynScan V4.
     """
-    def __init__(self, device='/dev/ttyUSB0', baud=9600, timeout=1):
+    def __init__(self, device='/dev/ttyUSB0', baud=9600, timeout=1, control_file=None):
         self.azimuth = float()
         self.elevation = float()
         self.DEVICE = device
         self.BAUD = baud
         self.TIMEOUT = timeout
+        self.control_file = control_file
+
         # for future use
         self.AZIMUTH_DIFFERENCE = 0
         self.ELEVATION_DIFFERENCE = 0
@@ -119,6 +123,44 @@ class Pedestal(object):
         if(Overshoot_Flag > 0):
             loadAzmAlt(Azimuth_Deg,Elevation_Deg)
 
+    def init_file_watchdog_thread(self):
+        if self.control_file is not None:
+            watched_dir = os.path.split(self.control_file)[0]  # os.path.split() returns tuple (path, filename)
+            print('watched_dir = {watched_dir}'.format(watched_dir=watched_dir))
+            patterns = [self.control_file]
+            print('patterns = {patterns}'.format(patterns=', '.join(patterns)))
+            self.event_handler = FileEventHandler(patterns=patterns)
+            self.observer = Observer()
+            self.observer.schedule(self.event_handler, watched_dir, recursive=False)
+            self.observer.start()
+        else:
+            logger.warn('no headerfile path given, cannot start headerfile monitor')
+
+class FileEventHandler(PatternMatchingEventHandler):
+    """Overriding PatternMatchingEventHandler to handle when headerfile changes."""
+    def __init__(self, patterns):
+        super(FileEventHandler, self).__init__(patterns=patterns)
+
+    def on_modified(self, event):
+        super(FileEventHandler, self).on_modified(event)
+        logger.info('[INFO] control file changed')
+        file_parser.read(pedestal.control_file)
+        new_azimuth = self._extract_param('AZIMUTH')
+        new_elevation = self._extract_param('ELEVATION')
+        logger.debug('New direction from control file: {}, {}'.format(new_azimuth, new_elevation))
+        pedestal.set_position(float(new_azimuth), float(new_elevation))
+
+    def _extract_param(self, param):
+        """ returns the value of given param name
+        """
+        result = ""
+        try:
+            result = file_parser['Direction'][param]
+        except Exception as e:
+            logger.error('Could not find required parameter "{}" in {}'
+                              .format(param, pedestal.control_file))
+        return result
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage='pedestal.py',
                                      description='Monitor and control of a NeXtRAD antenna')
@@ -126,6 +168,7 @@ if __name__ == "__main__":
                         action='store_true', default=False)
     parser.add_argument('-c', '--cli', help='launch command-line interface',
                         action='store_true', default=False)
+    parser.add_argument('-f', '--file', help="control file containing direction parameters")
     args = parser.parse_args()
 
     logger = logging.getLogger('pedestal_logger')
@@ -137,7 +180,7 @@ if __name__ == "__main__":
         ch.setLevel(logging.WARNING)
     logger.addHandler(ch)
 
-
+    pedestal = Pedestal()
 
     if args.cli:
         user_input = ''
@@ -155,10 +198,13 @@ if __name__ == "__main__":
             print('\n')
             user_input = input('press "y" if these operations have been performed (y/N)?\n')
 
-        pedestal = Pedestal()
         try:
             pedestal.connect()
             print('>>> Connection Established')
+            pedestal.control_file = args.file
+            file_parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+            file_parser.optionxform = str  # retain upper case for keys
+            pedestal.init_file_watchdog_thread()
         except Exception as e:
             logger.error('[ERROR] Error with establishing connection')
 
