@@ -1,12 +1,15 @@
 NeXtRAD Antenna Mount/Pedestal Controller
----
+===
 
 Requires
+---
 
 *  Python3
 *  pyserial
 *  watchdog
 
+Usage
+---
     usage: pedestal.py
 
     Monitor and control of a NeXtRAD antenna
@@ -19,6 +22,7 @@ Requires
       -p PORT, --port PORT  serial port to connect to [/dev/ttyUSB0]
 
 Command-Line Interface
+---
 
     sudo python3 pedestal.py -c
 
