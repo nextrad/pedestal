@@ -10,6 +10,8 @@ import os
 import logging
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
+import npyscreen
+
 
 class Pedestal(object):
     """
@@ -34,6 +36,14 @@ class Pedestal(object):
         logger.debug("[DEBUG] Establishing serial connections using params: port={}, baudrate={}, timeout={}".format(self.DEVICE, self.BAUD, self.TIMEOUT))
         self.ser = serial.Serial(port=self.DEVICE, baudrate=self.BAUD, timeout=self.TIMEOUT)
 
+    def send_command(self, command):
+        # send a command to pedestal and returns a response
+        logger.debug('sending command: {}'.format(str.encode(command)))
+        self.ser.write(str.encode(command))
+        response = self.ser.read_until('#')
+        logger.debug('got back: {}'.format(response))
+        return response
+
     def check_connection(self):
         logger.debug("[DEBUG] Checking Connection...")
         strReadRemoteCommand = "Kx"
@@ -42,11 +52,31 @@ class Pedestal(object):
         if not (strRemoteControlText):
             raise Exception("Error code 1: serial port timed out while doing initial config for pedestal.")
 
-    def stop_slew(self):
+    def is_moving(self):
+        response = self.send_command('L')
+        if response == b'1#':
+            print('is moving')
+            return True
+        elif response == b'0#':
+            print('not moving')
+            return False
+        else:
+            print('unknown return')
+            return True
+
+    def stop(self):
         self.ser.write(str.encode('M'))
+        print('stopping...')
+        if self.is_moving():
+            print('still moving, try stop again...')
+            self.ser.write(str.encode('M'))
+            if self.is_moving():
+                print('STILL MOVING! KILL THE POWER!')
+        else:
+            print('stopped')
 
     def get_position(self):
-        '''Returns a tuple containing (azimuth, elevation) of the current position'''
+        ''' Returns a tuple containing (azimuth, elevation) of the current position '''
         self.ser.write(str.encode('Z'))
         azm_alt = self.ser.read_until(terminator='#')
         logger.debug("[DEBUG] Hex azm, elev: " + str(azm_alt[0:4]) + ', ' + str(azm_alt[5:9]))
@@ -118,9 +148,9 @@ class Pedestal(object):
         response = self.ser.read_until(terminator='#')
         logger.debug(response)
 
-        if (response[0] == '0'):
+        if response[0] == '0':
             raise Exception("Error: Specified heading out of range.", Azimuth_Deg, " ", Elevation_Deg)
-        if(Overshoot_Flag > 0):
+        if Overshoot_Flag > 0:
             loadAzmAlt(Azimuth_Deg,Elevation_Deg)
 
     def init_file_watchdog_thread(self):
@@ -134,7 +164,8 @@ class Pedestal(object):
             self.observer.schedule(self.event_handler, watched_dir, recursive=False)
             self.observer.start()
         else:
-            logger.warn('no headerfile path given, cannot start headerfile monitor')
+            logger.warning('no headerfile path given, cannot start headerfile monitor')
+
 
 class FileEventHandler(PatternMatchingEventHandler):
     """Overriding PatternMatchingEventHandler to handle when headerfile changes."""
@@ -161,12 +192,60 @@ class FileEventHandler(PatternMatchingEventHandler):
                               .format(param, pedestal.control_file))
         return result
 
+
+class TCUMonitorForm(npyscreen.Form):
+
+    def afterEditing(self):
+        self.parentApp.setNextForm(None)
+
+    def create(self):
+        self.count = 0
+        self.keypress_timeout = 5  # refresh period in 100ms (10 = 1s)
+        self.text_direction = self.add(npyscreen.TitleText, name='Current Direction', editable=False, value='???.???, ???.???')
+        self.text_new_azimuth= self.add(npyscreen.TitleText, name='New Azimuth', value='0.0')
+        self.text_new_elevation= self.add(npyscreen.TitleText, name='New Elevation', value='0.0')
+
+        self.button_goto = self.add(npyscreen.ButtonPress, name='GOTO')
+        self.button_goto.whenPressed = self.when_pressed_button_goto
+
+        self.button_stop = self.add(npyscreen.ButtonPress, name='STOP')
+        self.button_stop.whenPressed = self.when_pressed_button_stop
+
+        self.button_exit = self.add(npyscreen.ButtonPress, name='EXIT')
+        self.button_exit.whenPressed = self.when_pressed_button_exit
+
+    def when_pressed_button_stop(self):
+        pedestal.send_command('M')
+
+    def when_pressed_button_exit(self):
+        self.when_pressed_button_stop()
+        sys.exit()
+
+    def when_pressed_button_goto(self):
+        azi = float(self.text_new_azimuth.value)
+        alt = float(self.text_new_elevation.value)
+        pedestal.set_position(azi, alt)
+
+    def while_waiting(self):
+        # called every keypress_timeout period when user not interacting
+        azimuth, elevation = pedestal.get_position()
+        self.text_direction.value = str('{0:.3f}, {1:.3f}'.format(azimuth, elevation))
+        self.display()
+
+
+class TCUMonitorApplication(npyscreen.NPSAppManaged):
+    def onStart(self):
+        self.addForm('MAIN', TCUMonitorForm, name='NODE 0 TX')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage='pedestal.py',
                                      description='Monitor and control of a NeXtRAD antenna')
     parser.add_argument('-d', '--debug', help='display debug messages to STDOUT',
                         action='store_true', default=False)
     parser.add_argument('-c', '--cli', help='launch command-line interface',
+                        action='store_true', default=False)
+    parser.add_argument('-m', '--monitor', help='launch curses interface',
                         action='store_true', default=False)
     parser.add_argument('-f', '--file', help="control file containing direction parameters")
     parser.add_argument('-p', '--port', help="serial port to connect to [/dev/ttyUSB0]", default='/dev/ttyUSB0')
@@ -243,6 +322,36 @@ if __name__ == "__main__":
                 except Exception as e:
                     logger.error('Error with setting position')
             elif user_input == 'q':
+                pedestal.stop()
                 sys.exit()
             else:
-                pass
+                pedestal.stop()
+
+    elif args.monitor:
+        user_input = ''
+        while user_input != 'y':
+            print('\n')
+            print('Pedestal Startup Sequence')
+            print('-------------------------')
+            print('1) Power on the pedestal')
+            print('2) After remote has initialised, enter A-Z mode.')
+            print('3) Use the remote to point antennas at reference point.')
+            print('4) Power off the pedestal.')
+            print('5) Repeat steps 1 and 2.')
+            print('\n')
+            print('NB: If the pedestal is switched off this process will need to be repeated')
+            print('\n')
+            user_input = input('press "y" if these operations have been performed (y/N)?\n')
+
+        try:
+            pedestal.connect()
+            print('>>> Connection Established')
+            pedestal.control_file = args.file
+            file_parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+            file_parser.optionxform = str  # retain upper case for keys
+            pedestal.init_file_watchdog_thread()
+        except Exception as e:
+            logger.error('[ERROR] Error with establishing connection')
+
+        app = TCUMonitorApplication()
+        app.run()
