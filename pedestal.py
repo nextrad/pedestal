@@ -267,22 +267,31 @@ if __name__ == "__main__":
     if args.name:
         pedestal.name = args.name
 
-    if args.cli:
-        user_input = ''
-        while user_input != 'y':
-            print('\n')
-            print('Pedestal Startup Sequence')
-            print('-------------------------')
-            print('1) Power on the pedestal')
-            print('2) After remote has initialised, enter A-Z mode.')
-            print('3) Use the remote to point antennas at reference point.')
-            print('4) Power off the pedestal.')
-            print('5) Repeat steps 1 and 2.')
-            print('\n')
-            print('NB: If the pedestal is switched off this process will need to be repeated')
-            print('\n')
-            user_input = input('press "y" if these operations have been performed (y/N)?\n')
+    user_input = ''
+    print('')
+    print('Pedestal Startup Sequence')
+    print('-------------------------')
+    print('1) Power on the pedestal')
+    print('2) After hand controller has initialised, enter A-Z mode.')
+    print('3) Use the remote to point antenna at reference point.')
+    print('4) Power off the pedestal.')
+    print('5) Repeat steps 1 and 2.')
+    print('')
+    print('+--------------------------------------------+')
+    print('|                                            |')
+    print('|  Hand controller MUST be set to A-Z mode!  |')
+    print('|                                            |')
+    print('|         WATCH OUT FOR CABLE SNAG           |')
+    print('|                                            |')
+    print('+--------------------------------------------+')
+    print('')
+    print('NB: If the pedestal is switched off this process will need to be repeated')
+    print('')
+    user_input = input('enter "y" if you understand the consequences?\n')
+    if user_input != 'y':
+        sys.exit()
 
+    if args.cli:
         try:
             pedestal.connect()
             print('>>> Connection Established')
