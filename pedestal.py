@@ -20,6 +20,7 @@ class Pedestal(object):
                         hand controller - ORION SynScan V4.
     """
     def __init__(self, device='/dev/ttyUSB0', baud=9600, timeout=1, control_file=None):
+        self.name = 'Pedestal'
         self.azimuth = float()
         self.elevation = float()
         self.DEVICE = device
@@ -235,12 +236,13 @@ class TCUMonitorForm(npyscreen.Form):
 
 class TCUMonitorApplication(npyscreen.NPSAppManaged):
     def onStart(self):
-        self.addForm('MAIN', TCUMonitorForm, name='NODE 0 TX')
+        self.addForm('MAIN', TCUMonitorForm, name=pedestal.name)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage='pedestal.py',
                                      description='Monitor and control of a NeXtRAD antenna')
+    parser.add_argument('-n', '--name', help='name of pedestal to control e.g. "Node0 Rx"')
     parser.add_argument('-d', '--debug', help='display debug messages to STDOUT',
                         action='store_true', default=False)
     parser.add_argument('-c', '--cli', help='launch command-line interface',
@@ -261,6 +263,9 @@ if __name__ == "__main__":
     logger.addHandler(ch)
 
     pedestal = Pedestal(device=args.port)
+
+    if args.name:
+        pedestal.name = args.name
 
     if args.cli:
         user_input = ''
