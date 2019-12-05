@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
         while user_input != 'q':
             print('\n')
-            print('Pedestal Control System')
+            print(pedestal.name)
             print('-----------------------')
             print('1 - Check Connection')
             print('2 - Get Position')
