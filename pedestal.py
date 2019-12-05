@@ -201,7 +201,7 @@ class TCUMonitorForm(npyscreen.Form):
 
     def create(self):
         self.count = 0
-        self.keypress_timeout = 5  # refresh period in 100ms (10 = 1s)
+        self.keypress_timeout = 10  # refresh period in 100ms (10 = 1s)
         self.text_direction = self.add(npyscreen.TitleText, name='Current Direction', editable=False, value='???.???, ???.???')
         self.text_new_azimuth= self.add(npyscreen.TitleText, name='New Azimuth', value='0.0')
         self.text_new_elevation= self.add(npyscreen.TitleText, name='New Elevation', value='0.0')
@@ -343,27 +343,14 @@ if __name__ == "__main__":
 
     elif args.monitor:
         user_input = ''
-        while user_input != 'y':
-            print('\n')
-            print('Pedestal Startup Sequence')
-            print('-------------------------')
-            print('1) Power on the pedestal')
-            print('2) After remote has initialised, enter A-Z mode.')
-            print('3) Use the remote to point antennas at reference point.')
-            print('4) Power off the pedestal.')
-            print('5) Repeat steps 1 and 2.')
-            print('\n')
-            print('NB: If the pedestal is switched off this process will need to be repeated')
-            print('\n')
-            user_input = input('press "y" if these operations have been performed (y/N)?\n')
-
         try:
             pedestal.connect()
             print('>>> Connection Established')
-            pedestal.control_file = args.file
-            file_parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
-            file_parser.optionxform = str  # retain upper case for keys
-            pedestal.init_file_watchdog_thread()
+            # TODO: add lock on pedestal command
+            # pedestal.control_file = args.file
+            # file_parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+            # file_parser.optionxform = str  # retain upper case for keys
+            # pedestal.init_file_watchdog_thread()
         except Exception as e:
             logger.error('[ERROR] Error with establishing connection')
 
