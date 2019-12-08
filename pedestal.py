@@ -194,7 +194,7 @@ class FileEventHandler(PatternMatchingEventHandler):
         return result
 
 
-class TCUMonitorForm(npyscreen.Form):
+class PedestalControlForm(npyscreen.Form):
 
     def afterEditing(self):
         self.parentApp.setNextForm(None)
@@ -234,9 +234,9 @@ class TCUMonitorForm(npyscreen.Form):
         self.display()
 
 
-class TCUMonitorApplication(npyscreen.NPSAppManaged):
+class PedestalControlApplication(npyscreen.NPSAppManaged):
     def onStart(self):
-        self.addForm('MAIN', TCUMonitorForm, name=pedestal.name)
+        self.addForm('MAIN', PedestalControlForm, name=pedestal.name)
 
 
 if __name__ == "__main__":
@@ -354,5 +354,5 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error('[ERROR] Error with establishing connection')
 
-        app = TCUMonitorApplication()
+        app = PedestalControlApplication()
         app.run()
