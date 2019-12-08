@@ -12,6 +12,24 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import npyscreen
 
+# --------------------------------------------------------------------------------------
+# DESCRIPTION       PC CMD ASCII    RESPONSE        NOTES
+# --------------------------------------------------------------------------------------
+# Echo              Kx              X#              Useful to check connection
+#
+# GoTo Azm-Elev     BXXXX,YYYY      #               10 characters sent: 'B'=Command,
+#                                                   'XXXX'=Azm, comma, 'YYYY'=Elev.
+#                                                   If command conflicts with slew
+#                                                   limits, there will be no action.
+#
+# Get Azm-Elev      Z               XXXX,YYYY#      10 characters returned: 'XXXX'=Azm,
+#                                                   comma, 'YYYY'=Elev, '#'
+#
+# Cancel GoTo       M               #
+#
+# Is Goto in prog   L               0# or 1#        0=No, 1=Yes: “0” is ASCII character
+#                                                   zero
+# --------------------------------------------------------------------------------------
 
 class Pedestal(object):
     """
@@ -47,26 +65,20 @@ class Pedestal(object):
 
     def check_connection(self):
         logger.debug("[DEBUG] Checking Connection...")
-        strReadRemoteCommand = "Kx"
-        self.ser.write(str.encode(strReadRemoteCommand))
-        strRemoteControlText = self.ser.read_until(terminator='#')
-        if not (strRemoteControlText):
+        response = self.send_command("Kx")
+        if not (response):
             raise Exception("Error code 1: serial port timed out while doing initial config for pedestal.")
 
     def is_moving(self):
         response = self.send_command('L')
-        if response == b'1#':
-            print('is moving')
-            return True
-        elif response == b'0#':
+        # TODO: check response code
+        if response == b'0#':
             print('not moving')
             return False
-        else:
-            print('unknown return')
-            return True
+        return True
 
     def stop(self):
-        self.ser.write(str.encode('M'))
+        response = self.send_command('M')
         print('stopping...')
         if self.is_moving():
             print('still moving, try stop again...')
@@ -78,8 +90,7 @@ class Pedestal(object):
 
     def get_position(self):
         ''' Returns a tuple containing (azimuth, elevation) of the current position '''
-        self.ser.write(str.encode('Z'))
-        azm_alt = self.ser.read_until(terminator='#')
+        azm_alt = self.send_command('Z')
         logger.debug("[DEBUG] Hex azm, elev: " + str(azm_alt[0:4]) + ', ' + str(azm_alt[5:9]))
         Azimuth_Deg = int(azm_alt[0:4],16)*360.0/65536.0
         Elevation_Deg = int(azm_alt[5:9],16)*360.0/65536.0
@@ -144,10 +155,7 @@ class Pedestal(object):
         #Send 'Goto' Command
         command = "B%04X,%04X"% (Azimuth_Hex, Elevation_Hex)
         logger.debug("[DEBUG] Command for Azimuth and Elevation: " + command)
-        self.ser.write(str.encode(command))
-
-        response = self.ser.read_until(terminator='#')
-        logger.debug(response)
+        response = self.send_command(command)
 
         if response[0] == '0':
             raise Exception("Error: Specified heading out of range.", Azimuth_Deg, " ", Elevation_Deg)
