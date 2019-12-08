@@ -1,15 +1,49 @@
-NeXtRAD Antenna Mount/Pedestal Controller
-===
+# NeXtRAD Antenna Mount/Pedestal Controller
 
-Requires
----
+
+## Requires
 
 *  Python3
 *  pyserial
 *  watchdog
 
-Usage
----
+## Hardware Setup
+    +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    |                                                                                                                                                                             |
+    |                                                                              +--------------------+                                                                         |
+    |                                                                              |                    |                                                                         |
+    |                                                                              |  +--------------+  |                              +---------------------+                    |
+    |                                                                              |  |              |  |               +---+          |                     +---+                |
+    |       +-------------------------+                                            |  |  A-Z MODE!   |  |               |   +----------+                     |   |                |
+    |       |-------------------------|                                            |  +--------------+  |               |   |          |                     |   |                |
+    |       ||                       ||                                            XX                  XX               |   |          |                     |   |                |
+    |       ||                       ||                                             XX                XX                |   +----------+     Orion Atlas     |   |                |
+    |       ||        NODE           ||                                              XX--------------XX                 |   |          |      GoTo Mount     |   |                |
+    |       ||       LAPTOP          ||                                               |              |                  +---+          |                     +---+                |
+    |       ||                       ||                                               |              |                                 |                     |                    |
+    |       ||                       ||                                               |              |               +----------------->                     |                    |
+    |       ||                       ||                                               |   SynScan    |               |                 +---------------------X                    |
+    |       |-------------------------|             +--------------+                  |    Hand      |               |                X    X   X   X    XX   XX                   |
+    |      XX-------------------------X  USB        | USB<-->RS232 |              RJ12|  controller  |RJ45           |               X    X    X   X     XX   XX                  |
+    |      X                         X<------------->   CONVERTER  <------------------>              <---------------+              XX   XX    X   X      XX   XX                 |
+    |     X                         XX              +--------------+                  |              |                             XX   XX     X   X       XX   XX                |
+    |   XXX                        XX                                                 |              |                            XX   XX      X   X        XX    X               |
+    |  XX                        XX                                                   |              |                           XX   XX       X   X         XX   XX              |
+    |  X-------------------------X                                                    +--------------+                          XX   XX        X   X          XX   XX             |
+    |                                                                                                                          XX   XX         X   X           XX   XX            |
+    |                                                                                                                         XX   XX          X   X            XX   XX           |
+    |                                                                                                                        XX   XX           X---X             XX   XX          |
+    |                                                                                                                       XX   XX                               XX   XX         |
+    |                                                                                                                      XX   XX                                 XX   XX        |
+    |                                                                                                                     XX   XX                                   XX   XXX      |
+    |                                                                                                                    XX   XX                                      XX   XX     |
+    |                                                                                                                   X    X                                         XX   XX    |
+    |                                                                                                                  X    X                                            XX  XX   |
+    |                                                                                                                 X----X                                              X----X  |
+    +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+## Usage
+
     usage: pedestal.py
 
     Monitor and control of a NeXtRAD antenna
@@ -22,7 +56,7 @@ Usage
       -p PORT, --port PORT  serial port to connect to [/dev/ttyUSB0]
 
 Command-Line Interface
----
+
 
     sudo python3 pedestal.py -c
 
