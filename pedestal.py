@@ -1,6 +1,7 @@
-# Name:         pedestal.property
+# Name:         pedestal.py
 # Description:  python program to control an antenna pedestal
-# Author:       Brad Kahn based off the work of Stuart Hadfield and David Bussett
+# Author:       Brad Kahn
+# Notes:        parts of this code is based off the work of Stuart Hadfield and David Bussett
 
 import argparse
 import configparser
@@ -12,6 +13,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import npyscreen
 
+# SERIAL COMMANDS
 # --------------------------------------------------------------------------------------
 # DESCRIPTION       PC CMD ASCII    RESPONSE        NOTES
 # --------------------------------------------------------------------------------------
